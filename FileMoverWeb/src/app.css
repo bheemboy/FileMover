@@ -1,0 +1,17 @@
+:root {
+  font-family: 'Roboto';
+  line-height: 1.5;
+  background-color: #1E1E1E;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
