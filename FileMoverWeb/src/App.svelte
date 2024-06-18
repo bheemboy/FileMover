@@ -5,7 +5,11 @@
   import FolderList from "./lib/FolderList.svelte";
   import CommandBar from "./lib/CommandBar.svelte";
 
-  let BackendService = new FileMoverService("http://localhost:5000");
+  const SERVER_URL = import.meta.env.VITE_DOTNET_SERVER; // Access the SERVER_URL variable
+
+  console.log(`SERVER_URL=${SERVER_URL}`);
+
+  let BackendService = new FileMoverService(SERVER_URL);
   let PathSettings = [];
   let SelectedTab = -1;
 

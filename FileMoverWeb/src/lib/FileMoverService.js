@@ -72,7 +72,7 @@ export class FileMoverService {
     async initializeConnection() {
         if (this.#token.length > 0) {
             this.#connection = new HubConnectionBuilder()
-                .withUrl(this.#url + "/hub", { accessTokenFactory: () => this.#token })
+                .withUrl(this.#url + "hub", { accessTokenFactory: () => this.#token })
                 .build();
             let me = this;
             this.#connection.onclose(async () => {
@@ -95,7 +95,7 @@ export class FileMoverService {
         const username = "test";
 
         try {
-            let response = await fetch(this.#url + "/login", {
+            let response = await fetch(this.#url + "login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

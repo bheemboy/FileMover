@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 const string policyName = "CorsPolicy";
 
@@ -26,8 +27,20 @@ var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSetting
 
 builder.Services.AddSingleton(jwtSettings);
 
-var applicationFolders = builder.Configuration.GetSection("ApplicationFolders").Get<List<ApplicationFolder>>() ??
-    throw new Exception("Application Folders are not configured properly in appsettings.json");
+string configPath = "./config/settings.json";
+
+// #if DEBUG
+//     configPath = "./settings-sample.json";
+// #endif
+// Build a config object JSON providers.
+IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile(configPath).Build();
+
+// Get values from the config given their key and their target type.
+var applicationFolders = config.GetRequiredSection("ApplicationFolders").Get<List<ApplicationFolder>>() ??
+    throw new Exception("Application Folders are not configured properly in config/settings.json");
+
+// var applicationFolders = builder.Configuration.GetSection("ApplicationFolders").Get<List<ApplicationFolder>>() ??
+//     throw new Exception("Application Folders are not configured properly in appsettings.json");
 
 builder.Services.AddSingleton(applicationFolders);
 

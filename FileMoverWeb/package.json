@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 8080",
-    "build": "vite build && robocopy /MIR dist ..\\FileMoverService\\wwwroot",
+    "build": "vite build && npm run clean && npm run copy",
+    "clean": "rimraf ..\\FileMoverService\\wwwroot",
+    "copy": "ncp dist ..\\FileMoverService\\wwwroot",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.2",
+    "ncp": "^2.0.0",
+    "rimraf": "^5.0.7",
     "svelte": "^4.2.12",
     "vite": "^5.2.0"
   },

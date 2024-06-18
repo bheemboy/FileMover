@@ -1,0 +1,9 @@
+services:
+    web:
+        image: bheemboy/filemoverservice
+        container_name: filemoverservice
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        volumes:
+            - "C:/temp/config:/webapp/config"
