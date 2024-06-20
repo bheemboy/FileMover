@@ -22,7 +22,7 @@ public class FolderController
 
         try
         {
-            foreach (var directory in Directory.GetDirectories(folderPath))
+            foreach (var directory in Directory.GetDirectories(folderPath).OrderBy(dir => dir).ToList())
             {
                 var directoryInfo = new DirectoryInfo(directory);
                 folderContents.Add(new FolderInfo
@@ -33,7 +33,7 @@ public class FolderController
                 });
             }
 
-            foreach (var file in Directory.GetFiles(folderPath))
+            foreach (var file in Directory.GetFiles(folderPath).OrderBy(file => file).ToList())
             {
                 var fileInfo = new FileInfo(file);
                 folderContents.Add(new FolderInfo

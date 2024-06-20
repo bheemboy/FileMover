@@ -67,7 +67,7 @@
     <select size="10" bind:value={SelectedItem}>
         {#if FolderContents && FolderContents.length > 0}
             {#each FolderContents as content, i}
-                <option value={content}>{`${content.Name} (${formatBytes(content.Size)})`}</option>
+                <option class={(content.IsDirectory? "icon-folder": "icon-file")} value={content}>{`${content.Name} (${formatBytes(content.Size)})`}</option>
             {/each}
         {/if}
     </select>
@@ -135,6 +135,15 @@
     select:focus {
         outline: none;
     }
+
+    .icon-folder:before {
+        content: "\1F4C1"; /* Unicode for folder icon */
+        margin-right: 3px;
+    }
+    .icon-file:before {
+        content: "\1F4C4"; /* Unicode for file icon */
+        margin-right: 3px;
+    }    
 
     .Folder-Buttons-Container {
         display: flex;
