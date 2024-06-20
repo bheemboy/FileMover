@@ -29,9 +29,10 @@ builder.Services.AddSingleton(jwtSettings);
 
 string configPath = "./config/settings.json";
 
-// #if DEBUG
-//     configPath = "./settings-sample.json";
-// #endif
+#if DEBUG
+    configPath = "./config/settings.Development.json";
+#endif
+
 // Build a config object JSON providers.
 IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile(configPath).Build();
 

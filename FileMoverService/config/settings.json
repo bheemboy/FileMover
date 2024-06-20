@@ -1,21 +1,21 @@
 {
     "ApplicationFolders": [
         {
-            "ID": "preload_files",
-            "Title": "Preload Files",
+            "ID": "preloaded_files",
+            "Title": "Preloaded Files",
             "Paths": [
-                "C:\\FileMover\\dev\\preload",
-                "C:\\FileMover\\qa\\preload",
-                "C:\\FileMover\\released\\preload"
+                "/mnt/tank/dev/ac-preloaded-images",
+                "/mnt/tank/qa/ac-preloaded-images",
+                "/mnt/tank/released/ac-preloaded-images"
             ]
         },
         {
             "ID": "clonezilla_images",
             "Title": "Clonezilla Images",
             "Paths": [
-                "C:\\FileMover\\dev\\images",
-                "C:\\FileMover\\qa\\images",
-                "C:\\FileMover\\released\\images"
+                "/mnt/tank/dev/images/lenovo",
+                "/mnt/tank/qa/images/lenovo",
+                "/mnt/tank/released/images/lenovo"
             ]
         }
     ]
