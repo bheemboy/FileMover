@@ -8,12 +8,33 @@
     export let SelectedTab;
     export let CurrentFolderIndex;
     export let busy;
-    
+
     $: FolderPath = PathSettings[SelectedTab].Paths[CurrentFolderIndex];
     let SelectedItem = null;
     let FolderContents = null;
 
+    $: diable_copy_delete = !SelectedItem;
+    $: disable_create_sha256 = !enableCreateSHA256(SelectedItem);
+    $: disable_verify_sha256 = !enableVerifySHA256(SelectedItem);
+    
     $: getFolderContents(FolderPath);
+
+    function enableCreateSHA256(SelectedItem) {
+        if (!SelectedItem) return false;
+        const filename = SelectedItem.Name.toUpperCase(); 
+        if (!SelectedItem.IsDirectory && filename.endsWith(".SHA256")) return false;
+        
+        const checksumFileName = filename + '.SHA256';
+        const listOfCorrespondingSHA256 = FolderContents.filter((content) => (!content.IsDirectory && content.Name.toUpperCase() === checksumFileName));
+
+        return listOfCorrespondingSHA256.length<=0;
+    }
+
+    function enableVerifySHA256(SelectedItem) {
+        if (!SelectedItem) return false;
+        if (SelectedItem.IsDirectory) return false;
+        return SelectedItem.Name.toUpperCase().endsWith(".SHA256");
+    }
 
     export async function getFolderContents(path) {
         if (path) {
@@ -28,7 +49,6 @@
             console.log("Select an item to copy");
         } else {
             const dest = PathSettings[SelectedTab].Paths[destFolderIndex];
-            const itemName = SelectedItem.Name;
             await BackendService.copyPathToFolder(FolderPath, JSON.stringify(SelectedItem), dest);
         }
     }
@@ -43,6 +63,13 @@
                 }
             }
         }
+    }
+
+    async function createChecksum(event) {
+    }
+
+
+    async function verifyChecksum(event) {
     }
 
     function formatBytes(bytes, decimals = 2) {
@@ -73,31 +100,52 @@
     </select>
 
     <div class="Folder-Buttons-Container">
-        {#if CurrentFolderIndex > 0}
-            <FileButton
-                Type="COPYTOLEFT"
-                bind:busy
-                on:click={e => copy2Dest(CurrentFolderIndex-1)}
-            />
-        {:else}
-            <div style="width: 50px;"/>
-        {/if}
+        <div>
+            {#if CurrentFolderIndex > 0}
+                <FileButton
+                    Type="COPYTOLEFT"
+                    bind:busy
+                    bind:disable_button={diable_copy_delete}
+                    on:click={e => copy2Dest(CurrentFolderIndex-1)}
+                />
+            {:else}
+                <div style="width: 50px;"/>
+            {/if}
+        </div>
 
-        <FileButton 
-            Type="DELETE" 
-            bind:busy 
-            on:click={deleteClicked}
-        />
-
-        {#if CurrentFolderIndex < PathSettings[SelectedTab].Paths.length-1}
-            <FileButton
-                Type="COPYTORIGHT"
+        <div>
+            <FileButton 
+                Type="CREATE-SHA256" 
                 bind:busy 
-                on:click={e => copy2Dest(CurrentFolderIndex+1)}
+                bind:disable_button={disable_create_sha256}
+                on:click={createChecksum}
             />
-        {:else}
-            <div style="width: 50px;"/>
-        {/if}
+            <FileButton 
+                Type="VERIFY-SHA256" 
+                bind:busy 
+                bind:disable_button={disable_verify_sha256}
+                on:click={verifyChecksum}
+            />
+            <FileButton 
+                Type="DELETE" 
+                bind:busy 
+                bind:disable_button={diable_copy_delete}
+                on:click={deleteClicked}
+            />
+        </div>
+
+        <div>
+            {#if CurrentFolderIndex < PathSettings[SelectedTab].Paths.length-1}
+                <FileButton
+                    Type="COPYTORIGHT"
+                    bind:busy 
+                    bind:disable_button={diable_copy_delete}
+                    on:click={e => copy2Dest(CurrentFolderIndex+1)}
+                />
+            {:else}
+                <div style="width: 50px;"/>
+            {/if}
+        </div>
     </div>
 </div>
 

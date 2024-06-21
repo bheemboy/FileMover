@@ -1,24 +1,39 @@
 <script>
     export let Type;
     export let busy;
+    export let disable_button = false;
+
+    $: disabled = busy || disable_button;
 </script>
 
 <div class="tooltip">
-    <button disabled='{busy}' on:click>
+
+    <button disabled='{disabled}' on:click>
         {#if ('DELETE' == Type)}
-        <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#384350" stroke-miterlimit="10" d="M2 4.5h20M10.5 8v10M13.5 8v10M7.43 21.5L5 4.5h13.52l-1.97 17H7.43z" style="stroke: #ffffff;"/><path fill="none" stroke="#384350" stroke-miterlimit="10" stroke-width="2" d="M9 3h6" style="stroke: #ffffff;"/></svg>
-        <span class="tooltiptext">Delete item</span>
-    
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#384350" stroke-miterlimit="10" d="M2 4.5h20M10.5 8v10M13.5 8v10M7.43 21.5L5 4.5h13.52l-1.97 17H7.43z" style="stroke: crimson;"/><path fill="none" stroke="#384350" stroke-miterlimit="10" stroke-width="2" d="M9 3h6" style="stroke: crimson;"/></svg>
         {:else if  ('COPYTORIGHT' == Type)}
-        <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#485664" stroke-miterlimit="10" d="M12 18l6-6-6-6M6 18l6-6-6-6" style="stroke: #ffffff;"/></svg>
-        <span class="tooltiptext">Copy item to right</span>
-        
-        {:else}
-        <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#485664" stroke-miterlimit="10" d="M12 18l-6-6 6-6M18 18l-6-6 6-6" style="stroke: #ffffff;"/></svg>
-        <span class="tooltiptext">Copy item to left</span>
-    
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#485664" stroke-miterlimit="10" d="M12 18l6-6-6-6M6 18l6-6-6-6" style="stroke: #ffffff;"/></svg>
+        {:else if  ('COPYTOLEFT' == Type)}
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#485664" stroke-miterlimit="10" d="M12 18l-6-6 6-6M18 18l-6-6 6-6" style="stroke: #ffffff;"/></svg>
+        {:else if  ('CREATE-SHA256' == Type)}
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#384350" stroke-linejoin="round" stroke-width="1.25" d="M7.5 21.5l3-9-4.83.01L7.5 2.5h8l-3.48 7.02H18L7.5 21.5z" style="stroke: lightseagreen;"/></svg>
+        {:else if  ('VERIFY-SHA256' == Type)}
+            <svg class="svg-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="#384350" stroke-linecap="round" stroke-miterlimit="10" d="M9 12.73l1.85 1.77L15 10" style="stroke: greenyellow;"/><path fill="none" stroke="#384350" stroke-miterlimit="10" d="M12 22.48C9.8 21.91 4.5 19.9 4.5 17V4.42C5.84 4.16 10 3.27 12 1.67c2 1.6 6.16 2.49 7.5 2.75V17c0 2.9-5.3 4.91-7.5 5.48z" style="stroke: lightseagreen;"/></svg>
         {/if}
     </button>
+
+    {#if ('DELETE' == Type)}
+        <span class="tooltiptext">Delete item</span>
+    {:else if  ('COPYTORIGHT' == Type)}
+        <span class="tooltiptext">Copy item to right</span>
+    {:else if  ('COPYTOLEFT' == Type)}
+        <span class="tooltiptext">Copy item to left</span>
+    {:else if  ('CREATE-SHA256' == Type)}
+        <span class="tooltiptext">Create checksum</span>
+    {:else if  ('VERIFY-SHA256' == Type)}
+        <span class="tooltiptext">Verify checksum</span>
+    {/if}
+
 </div>
 
 <style>
@@ -60,8 +75,9 @@ button:hover {
 /* Hidden by default, the tooltip text */
 .tooltip .tooltiptext {
     visibility: hidden;
+    font-size: small;
     width: 120px;
-    background-color: rgb(255, 174, 0);
+    background-color: rgba(255, 230, 0, 0.753);
     color: black;
     text-align: center;
     border-radius: 5px;
@@ -76,13 +92,13 @@ button:hover {
     
     /* Fade in tooltip */
     opacity: 0;
-    transition: opacity 0.3s ease-in-out, visibility 0s linear 1.5s;
+    transition: opacity 0.2s ease-in, visibility 0s linear 1.5s;
 }
 
 /* Show the tooltip text when hovering */
 .tooltip:hover .tooltiptext {
     visibility: visible;
-    opacity: 0.7;
+    opacity: 1;
     transition: opacity 0.3s ease-in, visibility 0s linear;
     transition-delay: 1s;
 }
