@@ -9,7 +9,7 @@ using FileMoverService;
 public class StorageHub : Hub
 {
     private readonly List<ApplicationFolder> _applicationFolders;
-    private static readonly object _lock = new();
+    private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
     private static long _lastTicks = DateTime.MinValue.Ticks; 
     private static int _lastPercentage = -1;
     private static string _Command = "";
@@ -77,7 +77,7 @@ public class StorageHub : Hub
     }
     public async Task<bool> DeletePath(string folderPath, string name)
     {
-        if (Monitor.TryEnter(_lock))
+        if (await _semaphore.WaitAsync(0))
         {
             try
             {
@@ -95,7 +95,7 @@ public class StorageHub : Hub
             }
             finally
             {
-                Monitor.Exit(_lock);
+                _semaphore.Release();
                 await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
                 await _SendMessage(new BusyMessage(_Busy = false).Json);
             }
@@ -107,7 +107,7 @@ public class StorageHub : Hub
     }
     public async Task<bool> CopyPathToFolder(string sourcePath, string jsonSourceItem, string destinationPath)
     {
-        if (Monitor.TryEnter(_lock))
+        if (await _semaphore.WaitAsync(0))
         {
             try
             {
@@ -128,9 +128,9 @@ public class StorageHub : Hub
             }
             finally
             {
+                _semaphore.Release();
                 await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
                 await _SendMessage(new BusyMessage(_Busy = false).Json);
-                Monitor.Exit(_lock);
             }
         }
         else
@@ -141,7 +141,7 @@ public class StorageHub : Hub
 
     public async Task<bool> VerifyChecksum(string folderPath, string checksumFile)
     {
-        if (Monitor.TryEnter(_lock))
+        if (await _semaphore.WaitAsync(0))
         {
             try
             {
@@ -155,8 +155,8 @@ public class StorageHub : Hub
             }
             finally
             {
+                _semaphore.Release();
                 await _SendMessage(new BusyMessage(_Busy = false).Json);
-                Monitor.Exit(_lock);
             }
         }
         else
@@ -167,7 +167,7 @@ public class StorageHub : Hub
 
     public async Task<bool> CreateChecksum(string folderPath, string checksumItem)
     {
-        if (Monitor.TryEnter(_lock))
+        if (await _semaphore.WaitAsync(0))
         {
             try
             {
@@ -182,9 +182,9 @@ public class StorageHub : Hub
             }
             finally
             {
+                _semaphore.Release();
                 await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
                 await _SendMessage(new BusyMessage(_Busy = false).Json);
-                Monitor.Exit(_lock);
             }
         }
         else
