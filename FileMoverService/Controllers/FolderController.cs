@@ -257,6 +257,8 @@ public class FolderController
                     return false;
                 }
 
+                sendLogMessage($"Verifying checksum for file: {filePath}");
+
                 // Compute the SHA256 checksum of the file
                 string computedChecksum;
                 using (FileStream fileStream = File.OpenRead(filePath))
@@ -274,8 +276,6 @@ public class FolderController
                     sendLogMessage($"Computed: {computedChecksum}");
                     return false;
                 }
-
-                sendLogMessage($"Checksum verified for file: {filePath}");
             }
 
             return true;
