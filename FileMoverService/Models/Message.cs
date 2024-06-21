@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace FileMoverService
 {
-    public enum MessageType{busy=1, command=2, percentage=3, refreshfolder=4}
+    public enum MessageType{logmessage=0, busy=1, command=2, percentage=3, refreshfolder=4}
     public class Message 
     {
         public MessageType Type {get; set;}
@@ -18,6 +18,14 @@ namespace FileMoverService
             {
                 return JsonSerializer.Serialize(this, this.GetType()); 
             }
+        }
+    }
+    public class LogMessage : Message 
+    {
+        public string Message {get; set;}
+        public LogMessage(string message) : base(MessageType.logmessage)
+        {
+            Message = message;
         }
     }
     public class BusyMessage : Message 

@@ -4,6 +4,7 @@
   import Navbar from "./lib/Navbar.svelte";
   import FolderList from "./lib/FolderList.svelte";
   import CommandBar from "./lib/CommandBar.svelte";
+  import LogMessages from "./lib/LogMessages.svelte";
 
   const SERVER_URL = import.meta.env.VITE_DOTNET_SERVER; // Access the SERVER_URL variable
 
@@ -31,15 +32,10 @@
       folder = message.Folder;
     }
   }
-
 </script>
 
 <main>
-  <Navbar
-    bind:BackendService
-    bind:PathSettings
-    bind:SelectedTab
-  />
+  <Navbar bind:BackendService bind:PathSettings bind:SelectedTab />
 
   <FolderList
     bind:BackendService
@@ -50,6 +46,7 @@
 
   <CommandBar bind:busy bind:command bind:percentage />
 
-  <Login bind:BackendService />
+  <LogMessages bind:BackendService />
 
+  <Login bind:BackendService />
 </main>

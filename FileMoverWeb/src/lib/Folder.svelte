@@ -72,9 +72,7 @@
     }
 
     async function verifyChecksum(event) {
-        if (await BackendService.verifyChecksum(FolderPath, SelectedItem.Name)) {
-            alert("Checksum verification passed!");
-        } else {
+        if (!await BackendService.verifyChecksum(FolderPath, SelectedItem.Name)) {
             alert("Checksum verification failed");
         }
     }

@@ -4,6 +4,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
+using FileMoverService;
 
 public class StorageHub : Hub
 {
@@ -27,6 +28,15 @@ public class StorageHub : Hub
         }
     }
 
+    private async Task _SendLogMessage(string message, string? ConnectionId = null)
+    {
+        await _SendMessage(new LogMessage(message).Json, ConnectionId);
+    }
+    private async Task _ClearLogMessages()
+    {
+        await _SendLogMessage("");
+    }
+
     private async Task _SendPercentage(int percentage)
     {
         if (percentage == _lastPercentage) return;
@@ -37,20 +47,18 @@ public class StorageHub : Hub
             (percentage == 0) || 
             (percentage == 100))
         {
-            Console.WriteLine($"{DateTime.Now.ToString()} percentage={percentage}");
-            await _SendMessage(new FileMoverService.PercentageMessage(percentage, _targetFolder).Json);
+            await _SendMessage(new PercentageMessage(percentage, _targetFolder).Json);
             _lastPercentage = percentage;
             _lastTicks = DateTime.Now.Ticks;
-            Console.WriteLine($"{DateTime.Now.ToString()} percentage={percentage}");
         }
 
     }
 
     public override async Task OnConnectedAsync()
     {
-        await _SendMessage(new FileMoverService.BusyMessage(_Busy).Json, Context.ConnectionId);
-        await _SendMessage(new FileMoverService.CommandMessage(_Command).Json, Context.ConnectionId);
-        await _SendMessage(new FileMoverService.PercentageMessage(_lastPercentage, _targetFolder).Json, Context.ConnectionId);
+        await _SendMessage(new BusyMessage(_Busy).Json, Context.ConnectionId);
+        await _SendMessage(new CommandMessage(_Command).Json, Context.ConnectionId);
+        await _SendMessage(new PercentageMessage(_lastPercentage, _targetFolder).Json, Context.ConnectionId);
     }
 
     public StorageHub(List<ApplicationFolder> applicationFolders)
@@ -64,7 +72,7 @@ public class StorageHub : Hub
     }
     public async Task<string> GetFolderContents(string folderPath)
     {
-        var folderContents = await Task.Run(() => FolderController.GetFolderContents(folderPath));
+        var folderContents = await Task.Run(() => FolderController.GetFolderContents(folderPath, _SendLogMessage));
         return JsonSerializer.Serialize(folderContents);
     }
     public async Task<bool> DeletePath(string folderPath, string name)
@@ -75,10 +83,11 @@ public class StorageHub : Hub
             {
                 _targetFolder = folderPath;
 
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
-                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Delete '{name}' from '{folderPath}'").Json);
+                await _ClearLogMessages();
+                await _SendMessage(new BusyMessage(_Busy = true).Json);
+                await _SendMessage(new CommandMessage(_Command = $"Delete '{name}' from '{folderPath}'").Json);
 
-                if (FolderController.DeletePath(folderPath, name, _SendPercentage))
+                if (FolderController.DeletePath(folderPath, name, _SendPercentage, _SendLogMessage))
                 {
                     return true;
                 }
@@ -87,8 +96,8 @@ public class StorageHub : Hub
             finally
             {
                 Monitor.Exit(_lock);
-                await _SendMessage(new FileMoverService.RefreshFolderMessage(_targetFolder).Json);
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
+                await _SendMessage(new BusyMessage(_Busy = false).Json);
             }
         }
         else
@@ -107,10 +116,11 @@ public class StorageHub : Hub
                 double size = SourceItem?.Size?? 0;
                 _targetFolder = destinationPath;
                 
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
-                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Copy '{name}' from '{sourcePath}' to '{destinationPath}'").Json);
+                await _ClearLogMessages();
+                await _SendMessage(new BusyMessage(_Busy = true).Json);
+                await _SendMessage(new CommandMessage(_Command = $"Copy '{name}' from '{sourcePath}' to '{destinationPath}'").Json);
 
-                if (FolderController.CopyPathToFolder(sourcePath, name, destinationPath, size, _SendPercentage))
+                if (FolderController.CopyPathToFolder(sourcePath, name, destinationPath, size, _SendPercentage, _SendLogMessage))
                 {
                     return true;
                 }
@@ -118,8 +128,8 @@ public class StorageHub : Hub
             }
             finally
             {
-                await _SendMessage(new FileMoverService.RefreshFolderMessage(_targetFolder).Json);
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
+                await _SendMessage(new BusyMessage(_Busy = false).Json);
                 Monitor.Exit(_lock);
             }
         }
@@ -136,14 +146,16 @@ public class StorageHub : Hub
             try
             {
                 string checksumFilePath = Path.Combine(folderPath, checksumFile);
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
-                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Verify checksums in '{checksumFilePath}'").Json);
 
-                return FolderController.VerifyChecksum(checksumFilePath, _SendPercentage);
+                await _ClearLogMessages();
+                await _SendMessage(new BusyMessage(_Busy = true).Json);
+                await _SendMessage(new CommandMessage(_Command = $"Verify checksums in '{checksumFilePath}'").Json);
+
+                return FolderController.VerifyChecksum(checksumFilePath, _SendPercentage, _SendLogMessage);
             }
             finally
             {
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                await _SendMessage(new BusyMessage(_Busy = false).Json);
                 Monitor.Exit(_lock);
             }
         }
@@ -161,15 +173,17 @@ public class StorageHub : Hub
             {
                 _targetFolder = folderPath;
                 string checksumPath = Path.Combine(folderPath, checksumItem);
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
-                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Create checksums file for '{checksumPath}'").Json);
 
-                return FolderController.CreateChecksum(folderPath, checksumItem, _SendPercentage);
+                await _ClearLogMessages();
+                await _SendMessage(new BusyMessage(_Busy = true).Json);
+                await _SendMessage(new CommandMessage(_Command = $"Create checksums file for '{checksumPath}'").Json);
+
+                return FolderController.CreateChecksum(folderPath, checksumItem, _SendPercentage, _SendLogMessage);
             }
             finally
             {
-                await _SendMessage(new FileMoverService.RefreshFolderMessage(_targetFolder).Json);
-                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                await _SendMessage(new RefreshFolderMessage(_targetFolder).Json);
+                await _SendMessage(new BusyMessage(_Busy = false).Json);
                 Monitor.Exit(_lock);
             }
         }

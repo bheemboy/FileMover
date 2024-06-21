@@ -15,10 +15,11 @@ public class FolderInfo
 }
 
 public delegate Task UpdatePercentageDelegate(int percentageDone);
+public delegate Task SendLogMessage(string message, string? ConnectionId = null);
 
 public class FolderController
 {
-    public static IEnumerable<FolderInfo> GetFolderContents(string folderPath)
+    public static IEnumerable<FolderInfo> GetFolderContents(string folderPath, SendLogMessage sendLogMessage)
     {
         var folderContents = new List<FolderInfo>();
 
@@ -30,7 +31,7 @@ public class FolderController
                 folderContents.Add(new FolderInfo
                 {
                     Name = directoryInfo.Name,
-                    Size = GetDirectorySize(directoryInfo),
+                    Size = GetDirectorySize(directoryInfo, sendLogMessage),
                     IsDirectory = true
                 });
             }
@@ -48,13 +49,17 @@ public class FolderController
         }
         catch (UnauthorizedAccessException)
         {
-            Console.WriteLine($"Access denied to {folderPath}");
+            sendLogMessage($"Access denied to {folderPath}");
+        }
+        catch (Exception e)
+        {
+            sendLogMessage($"Error getting folder contents '{folderPath}': {e.Message}");
         }
 
         return folderContents;
     }
 
-    private static long GetDirectorySize(DirectoryInfo directory)
+    private static long GetDirectorySize(DirectoryInfo directory, SendLogMessage sendLogMessage)
     {
         long size = 0;
         try
@@ -66,18 +71,23 @@ public class FolderController
 
             foreach (var subDirectory in directory.GetDirectories())
             {
-                size += GetDirectorySize(subDirectory);
+                size += GetDirectorySize(subDirectory, sendLogMessage);
             }
         }
         catch (UnauthorizedAccessException)
         {
-            Console.WriteLine($"Access denied to {directory.FullName}");
+            sendLogMessage($"Access denied to {directory.FullName}");
+        }
+        catch (Exception e)
+        {
+            sendLogMessage($"Error getting directory size '{directory.FullName}': {e.Message}");
+            throw;
         }
 
         return size;
     }
 
-    public static bool CopyPathToFolder(string path, string name, string destinationFolder, double totalsize, UpdatePercentageDelegate updatePercentage)
+    public static bool CopyPathToFolder(string path, string name, string destinationFolder, double totalsize, UpdatePercentageDelegate updatePercentage, SendLogMessage sendLogMessage)
     {
         string sourcePath = Path.Combine(path, name);
         double copied = 0;
@@ -85,7 +95,7 @@ public class FolderController
         // Check if the source path exists
         if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
         {
-            Console.WriteLine($"Source path '{sourcePath}' does not exist.");
+            sendLogMessage($"Path '{sourcePath}' not found");
             return false;
         }
 
@@ -104,22 +114,22 @@ public class FolderController
                 // Copy the file to the destination folder
                 string fileName = Path.GetFileName(sourcePath);
                 string destinationPath = Path.Combine(destinationFolder, fileName);
+                sendLogMessage($"Copying '{destinationPath}'");
                 File.Copy(sourcePath, destinationPath, true);
-                Console.WriteLine($"File '{sourcePath}' copied to '{destinationPath}'");
             }
             else
             {
                 // Copy the directory and its contents to the destination folder
                 string directoryName = Path.GetFileName(sourcePath);
                 string destinationPath = Path.Combine(destinationFolder, directoryName);
-                CopyDirectory(sourcePath, destinationPath, ref copied, totalsize, updatePercentage);
-                Console.WriteLine($"Directory '{sourcePath}' copied to '{destinationPath}'");
+                sendLogMessage($"Copying directory '{destinationPath}'");
+                CopyDirectory(sourcePath, destinationPath, ref copied, totalsize, updatePercentage, sendLogMessage);
             }
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error copying '{sourcePath}': {ex.Message}");
+            sendLogMessage($"Error copying '{sourcePath}': {ex.Message}");
         }
         finally
         {
@@ -128,7 +138,7 @@ public class FolderController
         return false;
     }
 
-    private static void CopyDirectory(string sourceDir, string destinationDir, ref double copied, double totalsize, UpdatePercentageDelegate updatePercentage)
+    private static void CopyDirectory(string sourceDir, string destinationDir, ref double copied, double totalsize, UpdatePercentageDelegate updatePercentage, SendLogMessage sendLogMessage)
     {
         // Get information about the source directory
         var dir = new DirectoryInfo(sourceDir);
@@ -141,6 +151,8 @@ public class FolderController
         foreach (FileInfo file in dir.GetFiles())
         {
             string targetFilePath = Path.Combine(destinationDir, file.Name);
+            sendLogMessage($"Copying '{targetFilePath}'");
+
             file.CopyTo(targetFilePath);
             copied += file.Length;
             updatePercentage((int)(100 * copied / totalsize));
@@ -150,11 +162,12 @@ public class FolderController
         foreach (DirectoryInfo subDir in dir.GetDirectories())
         {
             string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-            CopyDirectory(subDir.FullName, newDestinationDir, ref copied, totalsize, updatePercentage);
+            sendLogMessage($"Copying directory '{newDestinationDir}'");
+            CopyDirectory(subDir.FullName, newDestinationDir, ref copied, totalsize, updatePercentage, sendLogMessage);
         }
     }
 
-    public static bool DeletePath(string folderPath, string name, UpdatePercentageDelegate updatePercentage)
+    public static bool DeletePath(string folderPath, string name, UpdatePercentageDelegate updatePercentage, SendLogMessage sendLogMessage)
     {
         try
         {
@@ -168,32 +181,36 @@ public class FolderController
             if (attr.HasFlag(FileAttributes.Directory))
             {
                 // Recursively delete the directory and its contents
+                sendLogMessage($"Deleting directory '{fullPath}'");
                 Directory.Delete(fullPath, true);
-                Console.WriteLine($"Directory '{fullPath}' deleted successfully.");
             }
             else
             {
                 // Delete the file
+                sendLogMessage($"Deleting file '{fullPath}'");
                 File.Delete(fullPath);
-                Console.WriteLine($"File '{fullPath}' deleted successfully.");
             }
             return true;
         }
         catch (DirectoryNotFoundException ex)
         {
-            Console.WriteLine($"Directory not found: {ex.Message}");
+            sendLogMessage($"Directory not found: {ex.Message}");
         }
         catch (FileNotFoundException ex)
         {
-            Console.WriteLine($"File not found: {ex.Message}");
+            sendLogMessage($"File not found: {ex.Message}");
         }
         catch (UnauthorizedAccessException ex)
         {
-            Console.WriteLine($"Access denied: {ex.Message}");
+            sendLogMessage($"Access denied: {ex.Message}");
         }
         catch (IOException ex)
         {
-            Console.WriteLine($"An I/O error occurred: {ex.Message}");
+            sendLogMessage($"An I/O error occurred: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            sendLogMessage($"Error deleting: {ex.Message}");
         }
         finally
         {
@@ -201,12 +218,12 @@ public class FolderController
         }
         return false;
     }
-    public static bool VerifyChecksum(string checksumFilePath, UpdatePercentageDelegate updatePercentage)
+    public static bool VerifyChecksum(string checksumFilePath, UpdatePercentageDelegate updatePercentage, SendLogMessage sendLogMessage)
     {
         // Check if the source path exists
         if (!File.Exists(checksumFilePath))
         {
-            Console.WriteLine($"Checksum file '{checksumFilePath}' does not exist.");
+            sendLogMessage($"Checksum file '{checksumFilePath}' does not exist");
             return false;
         }
 
@@ -225,7 +242,7 @@ public class FolderController
                 var parts = line.Split(separator, StringSplitOptions.None);
                 if (parts.Length != 2)
                 {
-                    Console.WriteLine($"Invalid line format: {line}");
+                    sendLogMessage($"Invalid line format: {line}");
                     return false;
                 }
 
@@ -236,7 +253,7 @@ public class FolderController
 
                 if (!File.Exists(filePath))
                 {
-                    Console.WriteLine($"File not found: {filePath}");
+                    sendLogMessage($"File not found: {filePath}");
                     return false;
                 }
 
@@ -252,20 +269,20 @@ public class FolderController
                 // Compare the expected and computed checksums
                 if (expectedChecksum != computedChecksum)
                 {
-                    Console.WriteLine($"Checksum mismatch for file: {filePath}");
-                    Console.WriteLine($"Expected: {expectedChecksum}");
-                    Console.WriteLine($"Computed: {computedChecksum}");
+                    sendLogMessage($"Checksum mismatch for file: {filePath}");
+                    sendLogMessage($"Expected: {expectedChecksum}");
+                    sendLogMessage($"Computed: {computedChecksum}");
                     return false;
                 }
 
-                Console.WriteLine($"Checksum verified for file: {filePath}");
+                sendLogMessage($"Checksum verified for file: {filePath}");
             }
 
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error verifying '{checksumFilePath}': {ex.Message}");
+            sendLogMessage($"Error verifying '{checksumFilePath}': {ex.Message}");
         }
         finally
         {
@@ -274,13 +291,13 @@ public class FolderController
         return false;
     }
 
-    public static bool CreateChecksum(string folderPath, string checksumItem, UpdatePercentageDelegate updatePercentage)
+    public static bool CreateChecksum(string folderPath, string checksumItem, UpdatePercentageDelegate updatePercentage, SendLogMessage sendLogMessage)
     {
         // Check if the source path exists
         string checksumPath = Path.Combine(folderPath, checksumItem);
         if (!File.Exists(checksumPath) && !Directory.Exists(checksumPath))
         {
-            Console.WriteLine($"Source path '{checksumPath}' does not exist.");
+            sendLogMessage($"Source path '{checksumPath}' does not exist");
             return false;
         }
 
@@ -292,6 +309,7 @@ public class FolderController
             if (File.Exists(checksumPath))
             {
                 // Process a single file
+                sendLogMessage($"Calculating checksum for '{checksumPath}'");
                 CreateChecksumForFile(checksumPath, checksumFilePath);
             }
             else
@@ -301,18 +319,20 @@ public class FolderController
                 {
                     foreach (string filePath in Directory.GetFiles(checksumPath, "*", SearchOption.AllDirectories))
                     {
+                        sendLogMessage($"Calculating checksum for '{filePath}'");
                         string hash = ComputeSHA256Checksum(filePath);
                         string relativePath = Path.GetRelativePath(folderPath, filePath).Replace('\\', '/');
                         writer.WriteLine($"{hash}  {relativePath}");
                     }
                 }
             }
+            sendLogMessage($"Checksum file '{checksumFilePath}' created");
 
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating checksum for '{checksumPath}': {ex.Message}");
+            sendLogMessage($"Error creating checksum for '{checksumPath}': {ex.Message}");
         }
         finally
         {
