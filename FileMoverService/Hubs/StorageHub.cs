@@ -128,4 +128,54 @@ public class StorageHub : Hub
             throw new InvalidOperationException("Server is busy.");
         }
     }
+
+    public async Task<bool> VerifyChecksum(string folderPath, string checksumFile)
+    {
+        if (Monitor.TryEnter(_lock))
+        {
+            try
+            {
+                string checksumFilePath = Path.Combine(folderPath, checksumFile);
+                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
+                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Verify checksums in '{checksumFilePath}'").Json);
+
+                return FolderController.VerifyChecksum(checksumFilePath, _SendPercentage);
+            }
+            finally
+            {
+                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                Monitor.Exit(_lock);
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException("Server is busy.");
+        }
+    }
+
+    public async Task<bool> CreateChecksum(string folderPath, string checksumItem)
+    {
+        if (Monitor.TryEnter(_lock))
+        {
+            try
+            {
+                _targetFolder = folderPath;
+                string checksumPath = Path.Combine(folderPath, checksumItem);
+                await _SendMessage(new FileMoverService.BusyMessage(_Busy = true).Json);
+                await _SendMessage(new FileMoverService.CommandMessage(_Command = $"Create checksums file for '{checksumPath}'").Json);
+
+                return FolderController.CreateChecksum(folderPath, checksumItem, _SendPercentage);
+            }
+            finally
+            {
+                await _SendMessage(new FileMoverService.RefreshFolderMessage(_targetFolder).Json);
+                await _SendMessage(new FileMoverService.BusyMessage(_Busy = false).Json);
+                Monitor.Exit(_lock);
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException("Server is busy.");
+        }
+    }
 }

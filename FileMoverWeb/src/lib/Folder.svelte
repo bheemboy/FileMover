@@ -66,10 +66,17 @@
     }
 
     async function createChecksum(event) {
+        if (!(await BackendService.createChecksum(FolderPath, SelectedItem.Name))) {
+            alert("Checksum file creation failed");
+        }
     }
 
-
     async function verifyChecksum(event) {
+        if (await BackendService.verifyChecksum(FolderPath, SelectedItem.Name)) {
+            alert("Checksum verification passed!");
+        } else {
+            alert("Checksum verification failed");
+        }
     }
 
     function formatBytes(bytes, decimals = 2) {

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
@@ -141,7 +143,7 @@ public class FolderController
             string targetFilePath = Path.Combine(destinationDir, file.Name);
             file.CopyTo(targetFilePath);
             copied += file.Length;
-            updatePercentage((int)(100*copied/totalsize));
+            updatePercentage((int)(100 * copied / totalsize));
         }
 
         // Copy each subdirectory using recursion
@@ -199,4 +201,146 @@ public class FolderController
         }
         return false;
     }
+    public static bool VerifyChecksum(string checksumFilePath, UpdatePercentageDelegate updatePercentage)
+    {
+        // Check if the source path exists
+        if (!File.Exists(checksumFilePath))
+        {
+            Console.WriteLine($"Checksum file '{checksumFilePath}' does not exist.");
+            return false;
+        }
+
+        try
+        {
+            updatePercentage(0);
+
+            // Read the .sha256 file
+            var lines = File.ReadAllLines(checksumFilePath);
+
+            string[] separator = ["  "];
+            
+            foreach (var line in lines)
+            {
+                // Split the line into checksum and filename
+                var parts = line.Split(separator, StringSplitOptions.None);
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine($"Invalid line format: {line}");
+                    return false;
+                }
+
+                string expectedChecksum = parts[0];
+                string filename = parts[1];
+
+                string filePath = Path.Combine(Path.GetDirectoryName(checksumFilePath)?? "", filename);
+
+                if (!File.Exists(filePath))
+                {
+                    Console.WriteLine($"File not found: {filePath}");
+                    return false;
+                }
+
+                // Compute the SHA256 checksum of the file
+                string computedChecksum;
+                using (FileStream fileStream = File.OpenRead(filePath))
+                {
+                    using SHA256 sha256 = SHA256.Create();
+                    byte[] hashBytes = sha256.ComputeHash(fileStream);
+                    computedChecksum = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                }
+
+                // Compare the expected and computed checksums
+                if (expectedChecksum != computedChecksum)
+                {
+                    Console.WriteLine($"Checksum mismatch for file: {filePath}");
+                    Console.WriteLine($"Expected: {expectedChecksum}");
+                    Console.WriteLine($"Computed: {computedChecksum}");
+                    return false;
+                }
+
+                Console.WriteLine($"Checksum verified for file: {filePath}");
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error verifying '{checksumFilePath}': {ex.Message}");
+        }
+        finally
+        {
+            updatePercentage(100);
+        }
+        return false;
+    }
+
+    public static bool CreateChecksum(string folderPath, string checksumItem, UpdatePercentageDelegate updatePercentage)
+    {
+        // Check if the source path exists
+        string checksumPath = Path.Combine(folderPath, checksumItem);
+        if (!File.Exists(checksumPath) && !Directory.Exists(checksumPath))
+        {
+            Console.WriteLine($"Source path '{checksumPath}' does not exist.");
+            return false;
+        }
+
+        try
+        {
+            updatePercentage(0);
+            string checksumFilePath = checksumPath + ".sha256";
+
+            if (File.Exists(checksumPath))
+            {
+                // Process a single file
+                CreateChecksumForFile(checksumPath, checksumFilePath);
+            }
+            else
+            {
+                // Process all files in the directory
+                using (StreamWriter writer = new StreamWriter(checksumFilePath))
+                {
+                    foreach (string filePath in Directory.GetFiles(checksumPath, "*", SearchOption.AllDirectories))
+                    {
+                        string hash = ComputeSHA256Checksum(filePath);
+                        string relativePath = Path.GetRelativePath(folderPath, filePath).Replace('\\', '/');
+                        writer.WriteLine($"{hash}  {relativePath}");
+                    }
+                }
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating checksum for '{checksumPath}': {ex.Message}");
+        }
+        finally
+        {
+            updatePercentage(100);
+        }
+        return false;
+    }
+
+
+    private static void CreateChecksumForFile(string filePath, string checksumFilePath)
+    {
+        using (StreamWriter writer = new StreamWriter(checksumFilePath))
+        {
+            string hash = ComputeSHA256Checksum(filePath);
+            writer.WriteLine($"{hash}  {Path.GetFileName(filePath)}");
+        }
+    }
+
+    private static string ComputeSHA256Checksum(string filePath)
+    {
+        using (FileStream fileStream = File.OpenRead(filePath))
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(fileStream);
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            }
+        }
+    }
+
 }

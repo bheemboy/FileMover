@@ -171,7 +171,7 @@ export class FileMoverService {
     async copyPathToFolder(sourcePath, sourceItem, destinationPath) {
         if (this.isLoggedIn()) {
             try {
-                return await this.#connection.invoke("CopyPathToFolder", sourcePath, sourceItem, destinationPath);;
+                return await this.#connection.invoke("CopyPathToFolder", sourcePath, sourceItem, destinationPath);
             } catch (error) {
                 console.error(error);
             }
@@ -180,4 +180,32 @@ export class FileMoverService {
         }
         return false;
     }
+
+    async verifyChecksum(folderPath, checksumFile) {
+        if (this.isLoggedIn()) {
+            try {
+                return await this.#connection.invoke("VerifyChecksum", folderPath, checksumFile);
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            console.error("Connection to server not yet started.");
+        }
+        return false;
+    }
+
+    async createChecksum(folderPath, checksumItem) {
+        if (this.isLoggedIn()) {
+            try {
+                return await this.#connection.invoke("CreateChecksum", folderPath, checksumItem);
+            } catch (error) {
+                console.error(error);
+            }
+        } else {
+            console.error("Connection to server not yet started.");
+        }
+        return false;
+    }
+
+    
 }
