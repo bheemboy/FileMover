@@ -46,7 +46,7 @@
 
   <CommandBar bind:busy bind:command bind:percentage />
 
-  <LogMessages bind:BackendService />
+  <LogMessages bind:BackendService bind:busy/>
 
   <Login bind:BackendService />
 </main>

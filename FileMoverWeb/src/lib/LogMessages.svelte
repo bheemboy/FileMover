@@ -5,6 +5,7 @@
     const messages = writable([]);
 
     export let BackendService;
+    export let busy;
 
     BackendService.on("Message", onMessage);
     function onMessage(message) {
@@ -19,6 +20,12 @@
     }
   </script>
   
+  <div class="debug-messages {(busy) ? 'busy' : ''}">
+    {#each $messages as message (message)}
+      <div>{message}</div>
+    {/each}
+  </div>
+  
   <style>
     .debug-messages {
       font-family: monospace;
@@ -29,11 +36,9 @@
       padding: 10px 40px 10px 40px ;
       margin: 10px 0;
     }
+    .debug-messages.busy {
+        color: lightgray;
+    }
+
   </style>
-  
-  <div class="debug-messages">
-    {#each $messages as message (message)}
-      <div>{message}</div>
-    {/each}
-  </div>
   
